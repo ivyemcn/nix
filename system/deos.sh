@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# author: noflcl
 
 _homeConfig="/home/$USER/.config/home-manager/home.nix"
 

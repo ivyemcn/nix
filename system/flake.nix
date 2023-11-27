@@ -1,46 +1,47 @@
 {
 
-  description = "HomeManager switch at the user level";
+  description = "A crude edition of deployOS";
 
 
-  outputs = { self, nixpkgs }: {
-
-    defaultPackage.x86_64-linux = self.packages.x86_64-linux.deployOS;
+  inputs.flake-utils.url = "github:numtide/flake-utils";
 
 
-    packages.x86_64-linux.deployOS =
+  outputs = { self, nixpkgs, flake-utils }:
+
+    flake-utils.lib.eachDefaultSystem (system:
 
       let
 
-        pkgs = import nixpkgs { system = "x86_64-linux"; };
+        pkgs = import nixpkgs { inherit system; };
 
-
-        my-name = "deployOS";
-
-        deployOS = pkgs.writeShellScriptBin my-name ''
-          echo " "
-          echo "###"
-          echo "# deployOS is switching users home settings..."
-          echo "###"
-          echo " "
-          home-manager switch
-        '';
+        my-name = "deos";
 
         my-buildInputs = with pkgs; [ ];
 
-      in pkgs.symlinkJoin {
+        deos = (pkgs.writeScriptBin my-name (builtins.readFile ./deos.sh)).overrideAttrs(old: {
 
-        name = my-name;
+          buildCommand = "${old.buildCommand}\n patchShebangs $out";
 
-        paths = [ deployOS ] ++ my-buildInputs;
+        });
 
-        buildInputs = [ pkgs.makeWrapper ];
+      in rec {
 
-        postBuild = "wrapProgram $out/bin/${my-name} --prefix PATH : $out/bin";
+        defaultPackage = packages.deos;
 
-      };
+        packages.deos = pkgs.symlinkJoin {
 
-  };
+          name = my-name;
+
+          paths = [ deos ] ++ my-buildInputs;
+
+          buildInputs = [ pkgs.makeWrapper ];
+
+          postBuild = "wrapProgram $out/bin/${my-name} --prefix PATH : $out/bin";
+
+        };
+
+      }
+
+    );
 
 }
-
